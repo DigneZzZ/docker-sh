@@ -11,3 +11,18 @@ Recomendation VPS Hosting with 10% Discount: 	[VDSina.ru](https://vdsina.ru/?par
 👤 ** Alexey **
 * Git: [DigneZzZ](https://github.com/DigneZzZ)
 * Site: [OpeNode.RU](https://openode.ru)
+
+# Install Guide:
+
+1. Clone the git and edit install-script
+```bash
+https://github.com/DigneZzZ/docker-sh.git
+```
+2. Make CHMOD
+```bash
+chmod +x docker-sh/docker-ce-yml.sh
+```
+3. Run
+```bash
+sudo .docker-sh/docker-install-compose.sh
+```
