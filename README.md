@@ -14,6 +14,11 @@ Recomendation VPS Hosting with 10% Discount: 	[VDSina.ru](https://vdsina.ru/?par
 
 # Install Guide:
 
+
+0. Install git service:
+```bash
+sudo apt install git
+```
 1. Clone the git and edit install-script
 ```bash
 git clone https://github.com/DigneZzZ/docker-sh.git
