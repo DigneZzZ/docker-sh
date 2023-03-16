@@ -20,9 +20,9 @@ git clone https://github.com/DigneZzZ/docker-sh.git
 ```
 2. Make CHMOD
 ```bash
-chmod +x docker-sh/docker-ce-yml.sh
+chmod +x /docker-sh/docker-ce-yml.sh
 ```
 3. Run
 ```bash
-sudo .docker-sh/docker-install-compose.sh
+sudo ./docker-sh/docker-ce-yml.sh
 ```
