@@ -16,7 +16,7 @@ Recomendation VPS Hosting with 10% Discount: 	[VDSina.ru](https://vdsina.ru/?par
 
 1. Clone the git and edit install-script
 ```bash
-https://github.com/DigneZzZ/docker-sh.git
+git clone https://github.com/DigneZzZ/docker-sh.git
 ```
 2. Make CHMOD
 ```bash
