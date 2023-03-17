@@ -1,61 +1,73 @@
 #!/bin/bash
 
-# Определение дистрибутива Linux и его версии
-if [ -f /etc/lsb-release ]; then
-    . /etc/lsb-release
-    OS=$DISTRIB_ID
-    VER=$DISTRIB_RELEASE
-elif [ -f /etc/debian_version ]; then
-    OS=Debian
-    VER=$(cat /etc/debian_version)
-else
-    OS=$(uname -s)
-    VER=$(uname -r)
+if grep -q "VERSION_ID=\"10\"" /etc/os-release; then
+  echo "Этот скрипт не может быть выполнен на Debian 10."
+  exit 1
 fi
 
-# Установка Docker CE на основе дистрибутива Linux и его версии
-if [ $OS == "Ubuntu" ] && [ $VER == "20.04" ]; then
-    # Установка Docker CE для Ubuntu 20.04
-    apt-get update
-    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo \
-      "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io
-elif [ $OS == "Ubuntu" ] && [ $VER == "22.04" ]; then
-    # Установка Docker CE для Ubuntu 22.04
-    apt-get update
-    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo \
-      "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io
-elif [ $OS == "Debian" ] && [ $VER == "11" ]; then
-    # Установка Docker CE для Debian 11
-    apt-get update
-    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo \
-      "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
-      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io
-elif [ $OS == "Debian" ] && [ $VER == "10" ]; then
-    # Установка Docker CE для Debian 10
-    apt-get update
-    apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common
-    curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
-    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
-    apt-get update
-    apt-get install -y docker-ce docker-ce-cli containerd.io
-else
-    echo "Дистрибутив Linux и/или его версия не поддерживается."
-    exit 1
+# Здесь идет код скрипта, который должен быть выполнен на всех системах, кроме Debian 10
+
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+# Проверяем, выполняется ли скрипт от имени пользователя root
+if [ "$EUID" -ne 0 ]; then
+  echo -e "${RED}Запустите скрипт с правами root${NC}"
+  exit
 fi
 
-# Установка Docker Compose
-curl -L --fail https://raw.githubusercontent.com/linuxserver/docker-docker-compose/master/run.sh -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
+# Проверяем, установлен ли Docker
+if [ -x "$(command -v docker)" ]; then
+  echo -e "${GREEN}Docker уже установлен${NC}"
+else
+  # Проверяем, какое распределение используется, и устанавливаем необходимые зависимости
+  if [ -f /etc/debian_version ]; then
+    apt-get update
+    apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
+  elif [ -f /etc/redhat-release ]; then
+    dnf install -y dnf-plugins-core
+    dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    dnf install -y curl
+  else
+    echo -e "${RED}Неподдерживаемое распределение${NC}"
+    exit
+  fi
+
+  # Устанавливаем Docker
+  curl -fsSL https://get.docker.com -o get-docker.sh
+  sh get-docker.sh
+
+  # Запускаем и включаем службу Docker
+  systemctl start docker
+  systemctl enable docker
+
+  echo -e "${GREEN}Docker успешно установлен${NC}"
+fi
+
+# Устанавливаем Docker Compose
+LATEST_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+if [ -x "$(command -v docker-compose)" ]; then
+  INSTALLED_VERSION=$(docker-compose version --short)
+  if [ "$LATEST_VERSION" == "$INSTALLED_VERSION" ]; then
+    echo -e "${GREEN}Установлена последняя версия Docker Compose${NC}"
+  else
+    echo -e "${YELLOW}Обнаружена устаревшая версия Docker Compose${NC}"
+    read -p "Хотите обновить Docker Compose? (y/n) " update_docker_compose
+    case $update_docker_compose in
+      [Yy]* ) 
+        rm /usr/local/bin/docker-compose &&  curl -L "https://github.com/docker/compose/releases/download/$LATEST_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&  chmod +x /usr/local/bin/docker-compose && echo -e "${GREEN}Docker Compose успешно обновлен${NC}"
+        ;;
+      [Nn]* ) 
+        echo -e "${YELLOW}Продолжаем выполнение скрипта без обновления Docker Compose${NC}"
+        ;;
+      * ) 
+        echo -e "${RED}Неправильный ввод. Продолжаем выполнение скрипта без обновления Docker Compose${NC}"
+        ;;
+    esac
+  fi
+else
+  curl -L "https://github.com/docker/compose/releases/download/$LATEST_VERSION/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose &&  chmod +x /usr/local/bin/docker-compose && echo -e "${GREEN}Docker Compose успешно установлен${NC}"
+fi
