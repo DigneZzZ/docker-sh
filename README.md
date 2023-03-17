@@ -21,7 +21,7 @@ sudo apt update && sudo apt install git
 ```
 1. Clone the git and edit install-script
 ```bash
-git clone https://github.com/DigneZzZ/docker-sh.git
+git clone https://github.com/DigneZzZ/docker-sh.git && chmod +x docker-sh/docker-ce-yml.sh && sudo ./docker-sh/docker-ce-yml.sh
 ```
 2. Make CHMOD
 ```bash
